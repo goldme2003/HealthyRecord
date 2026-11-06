@@ -261,6 +261,62 @@
     color:#fff;font-size:14px;font-weight:600;background:rgba(255,255,255,.18);
     padding:9px 22px;border-radius:20px;cursor:pointer;
   }
+
+  /* 按日期查看 */
+  .date-card{padding:16px 18px;}
+  .date-head{display:flex;align-items:center;font-size:15px;font-weight:700;gap:8px;}
+  .date-badge{
+    margin-left:auto;font-size:11px;font-weight:700;color:var(--blue);
+    background:var(--blue-soft);border-radius:12px;padding:4px 10px;
+  }
+  .date-badge.past{color:#b45309;background:#fff4e6;}
+  .date-row{display:flex;gap:8px;margin-top:12px;align-items:center;}
+  .date-row input[type=date]{
+    flex:1;min-width:0;border:1.5px solid var(--line);border-radius:12px;
+    padding:10px;font-size:14px;color:var(--text);background:#fff;outline:none;
+  }
+  .date-row input[type=date]:focus{border-color:var(--blue);}
+  .day-btn{
+    border:1.5px solid var(--blue);background:#fff;color:var(--blue);
+    border-radius:12px;padding:10px 11px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  }
+  .day-btn:active{background:var(--blue-soft);}
+  .date-meta{display:flex;align-items:center;gap:10px;margin-top:12px;}
+  .date-summary{font-size:12px;color:var(--sub);flex:1;line-height:1.4;}
+  .clear-btn{
+    border:none;background:#fff0f0;color:#e03131;border-radius:12px;
+    padding:9px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
+  }
+  .clear-btn:active{background:#ffdede;}
+
+  /* 记录修改 / 补记 */
+  .record-list li .edit{
+    border:none;background:transparent;color:var(--blue);font-size:15px;
+    width:30px;height:30px;border-radius:50%;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .record-list li .edit:active{background:rgba(47,155,255,.12);}
+  .mini-add{
+    width:100%;margin-top:8px;border:1.5px dashed #a9d3ff;background:#fafcff;
+    color:var(--blue);border-radius:12px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;
+  }
+  .mini-add:active{background:var(--blue-soft);}
+
+  /* 过量饮水警示 */
+  .danger-tip{
+    margin-top:10px;font-size:12px;font-weight:700;color:#c2410c;
+    background:#fff4e6;border:1px solid #ffd8a8;border-radius:10px;padding:9px 10px;display:none;
+  }
+  .warn-box{text-align:center;}
+  .warn-emoji{font-size:48px;line-height:1.2;}
+  .warn-box h3{color:#c2410c;margin:8px 0;}
+  .warn-text{font-size:14px;color:var(--sub);line-height:1.7;margin:0 0 18px;}
+  .btn-danger{background:#ef4444;color:#fff;}
+  .btn-danger:active{background:#dc2626;}
+  .clear-warn{
+    font-size:13px;color:#c2410c;background:#fff4e6;border-radius:12px;
+    padding:11px 12px;margin-bottom:14px;line-height:1.6;
+  }
 </style>
 </head>
 <body>
@@ -277,9 +333,23 @@
     </div>
   </div>
 
+  <!-- 按日期查看 -->
+  <section class="card date-card">
+    <div class="date-head">📅 按日期查看 <span class="date-badge" id="dateBadge">今日</span></div>
+    <div class="date-row">
+      <input type="date" id="datePicker">
+      <button class="day-btn" id="todayBtn">回到今天</button>
+      <button class="day-btn" id="cardByDate">当天记录卡</button>
+    </div>
+    <div class="date-meta">
+      <span class="date-summary" id="dateSummary"></span>
+      <button class="clear-btn" id="clearDay">一键至零</button>
+    </div>
+  </section>
+
   <!-- 饮水 -->
   <section class="card">
-    <h2>💧 今日饮水 <button class="goal-btn" id="editGoal">🎯 目标 <span id="goalLabel">2000</span> ml ✎</button></h2>
+    <h2><span id="waterTitle">💧 今日饮水</span> <button class="goal-btn" id="editGoal">🎯 目标 <span id="goalLabel">2000</span> ml ✎</button></h2>
     <div class="water-top">
       <div class="ring-wrap">
         <svg width="120" height="120" viewBox="0 0 120 120">
@@ -293,25 +363,27 @@
         </div>
       </div>
       <div class="water-stats">
-        <div class="row1">今日合计 <b id="waterMl">0</b> / <span id="waterGoalText">2000</span> ml</div>
+        <div class="row1"><span id="waterRow1Label">今日合计</span> <b id="waterMl">0</b> / <span id="waterGoalText">2000</span> ml</div>
         <div class="row2">完成 <b id="waterPct">0%</b> · <span id="remainLabel">还差</span> <span class="hl" id="waterRemain">2000</span> ml</div>
         <div class="over-tip" id="overTip"></div>
       </div>
     </div>
     <button class="add-water" id="addWater">＋ 喝一杯（250 ml）</button>
+    <button class="mini-add" id="addWaterCustom">＋ 补记 / 自定义饮水量</button>
+    <div class="danger-tip" id="dangerTip"></div>
     <ul class="record-list" id="waterList"></ul>
   </section>
 
   <!-- 运动 -->
   <section class="card">
-    <h2>🏃 今日运动 <span class="tag" id="manageBtn" style="cursor:pointer;">管理</span></h2>
+    <h2><span id="exTitle">🏃 今日运动</span> <span class="tag" id="manageBtn" style="cursor:pointer;">管理</span></h2>
     <div class="tabs" id="projTabs"></div>
     <div id="exercisePage"></div>
     <button class="add-proj" id="addProj">＋ 添加项目</button>
   </section>
 
   <div class="gen-row">
-    <button class="gen-card" id="genCard">📸 生成记录卡</button>
+    <button class="gen-card" id="genCard">📸 <span id="genCardText">生成今日记录卡</span></button>
     <button class="view-card" id="viewCard">🔍 查看记录卡</button>
   </div>
 </div>
@@ -390,10 +462,69 @@
         <button class="step-btn" type="button" data-target="recMin" data-dir="1" data-step="5" data-min="5" data-max="600">＋</button>
       </div>
     </div>
+    <div class="field">
+      <label>记录时间</label>
+      <input type="time" id="recTime">
+    </div>
     <p class="field-hint" id="recHint">首次记录已填入默认值，之后自动沿用上次填写的数值。</p>
     <div class="modal-actions">
       <button class="btn-cancel" data-close="recModal">取消</button>
       <button class="btn-ok" id="saveRec">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 补记 / 修改饮水记录 -->
+<div class="modal" id="waterModal">
+  <div class="modal-box">
+    <h3 id="waterModalTitle">补记饮水</h3>
+    <div class="field">
+      <label>饮水量（ml，每次 ±250）</label>
+      <div class="stepper">
+        <button class="step-btn" type="button" data-target="waterAmount" data-dir="-1" data-step="250" data-min="50" data-max="20000">−</button>
+        <input type="number" id="waterAmount" min="50" max="20000" step="250">
+        <button class="step-btn" type="button" data-target="waterAmount" data-dir="1" data-step="250" data-min="50" data-max="20000">＋</button>
+      </div>
+      <div class="quick-goals" id="quickAmounts">
+        <button class="quick" type="button" data-amount="250">250 ml</button>
+        <button class="quick" type="button" data-amount="500">500 ml</button>
+        <button class="quick" type="button" data-amount="1000">1000 ml</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>记录时间</label>
+      <input type="time" id="waterTime">
+    </div>
+    <p class="field-hint" id="waterModalHint">可自定义水量与记录时间，用于补记历史数据。</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" data-close="waterModal">取消</button>
+      <button class="btn-ok" id="saveWater">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 过量饮水提示 -->
+<div class="modal" id="overModal">
+  <div class="modal-box warn-box">
+    <div class="warn-emoji">⚠️</div>
+    <h3>饮水量可能过多</h3>
+    <p class="warn-text" id="overText"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" data-close="overModal">我知道了</button>
+      <button class="btn-ok" id="overGoCheck">去检查记录</button>
+    </div>
+  </div>
+</div>
+
+<!-- 一键至零确认 -->
+<div class="modal" id="clearModal">
+  <div class="modal-box">
+    <h3>确认清空当天记录？</h3>
+    <div class="clear-warn" id="clearWarn"></div>
+    <p class="field-hint">此操作会永久删除所选日期的全部饮水和运动记录，无法撤销。</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" data-close="clearModal">取消</button>
+      <button class="btn-danger" id="confirmClear">确认清空</button>
     </div>
   </div>
 </div>
@@ -424,7 +555,7 @@
 <!-- 记录卡预览 -->
 <div class="modal card-modal" id="cardModal">
   <div class="modal-box">
-    <img class="card-preview" id="cardImg" alt="今日记录卡" title="点击查看大图">
+    <img class="card-preview" id="cardImg" alt="记录卡" title="点击查看大图">
     <div class="card-actions">
       <button class="btn-cancel" data-close="cardModal" style="flex:1;">关闭</button>
       <button class="btn-ok" id="zoomCard" style="flex:1;">🔍 大图</button>
@@ -436,7 +567,7 @@
 
 <!-- 记录卡大图查看 -->
 <div class="modal lightbox-modal" id="lightboxModal">
-  <img id="lightboxImg" alt="今日记录卡大图">
+  <img id="lightboxImg" alt="记录卡大图">
   <div class="lightbox-close" data-close="lightboxModal">✕ 关闭大图</div>
 </div>
 
@@ -451,12 +582,14 @@
     rec:'health_records',
     goal:'health_goal',        // 每日饮水目标（可修改）
     inputs:'health_inputs',    // 各运动项目上次填写值
-    congrats:'health_congrats' // 已祝贺标记（当天+目标值）
+    congrats:'health_congrats', // 已祝贺标记（当天+目标值）
+    warn:'health_warn'         // 已提示过量饮水的日期列表
   };
   const DEFAULT_NICK = '健康记录员';
   const DEFAULT_GOAL = 2000;
   const GOAL_STEP = 250;
   const WATER_STEP = 250;
+  const OVERDRINK_LIMIT = 10000; // 10 L：超过后提示「过度饮水 / 请检查数据」
   // 运动记录步长：时间 5 分钟，距离 0.5 公里；首次默认值
   const MIN_STEP = 5, KM_STEP = 0.5;
   const DEF_MIN = 30, DEF_KM = 3;
@@ -503,7 +636,11 @@
   let goal = load(LS.goal, DEFAULT_GOAL);              // 每日饮水目标（可手动修改）
   let lastInputs = load(LS.inputs, {});                // { 项目名: {km, minutes} }
   let congratsKey = load(LS.congrats, '');             // 已祝贺：'日期-目标值'
-  let cardDataUrl = null;                              // 最近生成的记录卡，用于随时查看
+  let warnKeys = load(LS.warn, []);                    // 已提示过量饮水的日期
+  let viewDate = todayKey();                           // 当前查看的日期 YYYY-MM-DD
+  let cardCache = {date:null, url:null};               // 记录卡缓存（按日期）
+  let editingWaterId = null;                           // 正在编辑的饮水记录 id
+  let editingRecId = null;                             // 正在编辑的运动记录 id
   let selectedProj = active.length ? active[0] : null; // 当前分页显示的运动项目
   let manageMode = false;                              // 是否处于“管理标签”模式
 
@@ -511,9 +648,26 @@
   const $ = id => document.getElementById(id);
   function todayKey(d){ d=d||new Date();
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-  function isToday(ts){ return new Date(ts).toDateString() === new Date().toDateString(); }
-  function fmtTime(ts){ const d=new Date(ts);
+  function dateKeyOf(ts){ return todayKey(new Date(ts)); }
+  function isToday(ts){ return dateKeyOf(ts) === todayKey(); }
+  function hhmm(d){ d=d||new Date();
     return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+  function fmtTime(ts){ return hhmm(new Date(ts)); }
+  // 日期 + 时间 -> 时间戳（用于补记 / 修改历史记录）
+  function tsOf(dateStr, timeStr){
+    const p=String(dateStr).split('-').map(Number);
+    const t=String(timeStr||'12:00').split(':').map(Number);
+    return new Date(p[0], p[1]-1, p[2], t[0]||0, t[1]||0, 0, 0).getTime();
+  }
+  function isViewToday(){ return viewDate === todayKey(); }
+  function dateShort(){ const p=viewDate.split('-'); return Number(p[1])+'月'+Number(p[2])+'日'; }
+  function dayWord(){ return isViewToday()? '今日' : dateShort(); }
+  function dayFull(){
+    const p=viewDate.split('-');
+    const d=new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+    const wk=['日','一','二','三','四','五','六'][d.getDay()];
+    return p[0]+'年'+Number(p[1])+'月'+Number(p[2])+'日 周'+wk;
+  }
   function fmtKm(v){ return (Math.round(v*10)/10).toString(); }
   function fmtPace(min, km){
     if(km<=0) return '--';
@@ -533,10 +687,11 @@
     return pool[Math.floor(Math.random()*pool.length)];
   }
 
-  function todayRecords(){ return records.filter(r=>isToday(r.ts)); }
-  function waterTotalNow(){
-    return todayRecords().filter(r=>r.type==='water').reduce((s,r)=>s+r.amount,0);
+  function viewRecords(){ return records.filter(r=>dateKeyOf(r.ts)===viewDate); }
+  function waterTotalOn(key){
+    return records.filter(r=>dateKeyOf(r.ts)===key && r.type==='water').reduce((s,r)=>s+r.amount,0);
   }
+  function waterTotalNow(){ return waterTotalOn(viewDate); }
 
   // 色阶：未达标为亮蓝；达标后每超出目标 TIER_MULTIPLE(0.5) 倍，颜色升级一次
   function ringInfo(total){
@@ -549,13 +704,15 @@
   // ---------- 渲染：饮水 ----------
   const RING_C = 2*Math.PI*52; // 326.7
   function renderWater(){
-    const recs = todayRecords().filter(r=>r.type==='water');
+    const recs = viewRecords().filter(r=>r.type==='water');
     const total = recs.reduce((s,r)=>s+r.amount,0);
     const pct = goal>0 ? Math.round(total/goal*100) : 0; // 不封顶，可超过 100%
     const remain = Math.max(0, goal-total);
     const over = Math.max(0, total-goal);
     const info = ringInfo(total);
 
+    $('waterTitle').textContent = '💧 '+dayWord()+'饮水';
+    $('waterRow1Label').textContent = dayWord()+'合计';
     $('waterTotal').textContent = total;
     $('waterTotal').style.color = info.color;
     $('waterMl').textContent = total;
@@ -584,25 +741,35 @@
     $('ringProg').style.strokeDashoffset = (RING_C*(1-drawPct/100)).toFixed(1);
     $('ringProg').style.stroke = info.color;
 
-    // 列表
+    // 过量饮水常驻提示
+    const dt=$('dangerTip');
+    if(total>OVERDRINK_LIMIT){
+      dt.style.display='block';
+      dt.textContent='⚠️ '+dayWord()+'饮水 '+total+' ml，已超过 10 L（10000 ml），请检查数据是否正确';
+    } else {
+      dt.style.display='none';
+    }
+
+    // 列表（按时间倒序，每条可修改 / 删除）
     const ul = $('waterList');
     ul.innerHTML='';
     if(recs.length===0){
-      ul.innerHTML='<div class="empty-tip">今日还没有饮水记录，点上方按钮喝一杯吧 💧</div>';
+      ul.innerHTML='<div class="empty-tip">'+dayWord()+'还没有饮水记录，点上方按钮记一杯吧 💧</div>';
     } else {
-      recs.slice().reverse().forEach(r=>{
+      recs.slice().sort((a,b)=>b.ts-a.ts).forEach(r=>{
         const li=document.createElement('li');
         li.innerHTML='<span class="time">'+fmtTime(r.ts)+'</span>'+
           '<span class="desc">喝水 '+r.amount+' ml</span>'+
-          '<button class="del" data-id="'+r.id+'">×</button>';
+          '<button class="edit" data-id="'+r.id+'" title="修改">✎</button>'+
+          '<button class="del" data-id="'+r.id+'" title="删除">×</button>';
         ul.appendChild(li);
       });
     }
   }
 
   // ---------- 渲染：运动（标签分页） ----------
-  function projectToday(name){
-    return todayRecords().filter(r=>r.type==='exercise'&&r.project===name);
+  function projectOn(name){
+    return viewRecords().filter(r=>r.type==='exercise'&&r.project===name);
   }
 
   // 保证 selectedProj 始终指向一个仍激活的项目
@@ -652,12 +819,12 @@
     const wrap = $('exercisePage');
     wrap.innerHTML='';
     if(!selectedProj){
-      wrap.innerHTML='<div class="empty-tip">今日暂无运动记录</div>';
+      wrap.innerHTML='<div class="empty-tip">'+dayWord()+'暂无运动记录</div>';
       return;
     }
     const p=getProject(selectedProj);
     if(!p){ ensureSelected(); return renderExercisePage(); }
-    const recs = projectToday(p.name);
+    const recs = projectOn(p.name);
     const totalKm = recs.reduce((s,r)=>s+(r.km||0),0);
     const totalMin = recs.reduce((s,r)=>s+(r.minutes||0),0);
     const card=document.createElement('div');
@@ -667,67 +834,168 @@
     else totalText = '<b>'+totalMin+'</b> 分钟';
     let head = '<div class="ex-head"><span class="dot" style="background:'+p.color+'"></span>'+
       '<span class="name">'+p.name+'</span>'+
-      '<span class="total">今日合计<br>'+totalText+'</span></div>';
-    let btn = '<button class="ex-record-btn" data-proj="'+p.name+'">＋ 记录'+p.name+'</button>';
+      '<span class="total">'+dayWord()+'合计<br>'+totalText+'</span></div>';
+    const verb = isViewToday()? '记录' : '补记';
+    let btn = '<button class="ex-record-btn" data-proj="'+p.name+'">＋ '+verb+p.name+'</button>';
     let list='<ul class="record-list">';
     if(recs.length===0){
-      list+='<div class="empty-tip">今日暂无'+p.name+'记录</div>';
+      list+='<div class="empty-tip">'+dayWord()+'暂无'+p.name+'记录</div>';
     } else {
-      recs.slice().reverse().forEach(r=>{
+      recs.slice().sort((a,b)=>b.ts-a.ts).forEach(r=>{
         let desc = p.trackKm ? (fmtKm(r.km)+' 公里 · '+r.minutes+' 分钟')
                              : (r.minutes+' 分钟');
         let pace = (p.name==='跑步' && r.km>0) ? ' · 配速 '+fmtPace(r.minutes,r.km) : '';
         list+='<li><span class="time">'+fmtTime(r.ts)+'</span>'+
           '<span class="desc">'+desc+pace+'</span>'+
-          '<button class="del" data-id="'+r.id+'">×</button></li>';
+          '<button class="edit" data-id="'+r.id+'" title="修改">✎</button>'+
+          '<button class="del" data-id="'+r.id+'" title="删除">×</button></li>';
       });
     }
     list+='</ul>';
     let avg='';
     if(p.name==='跑步' && totalKm>0){
-      avg='<div class="empty-tip" style="text-align:left;padding:10px 0 0;color:var(--blue);font-weight:600;">今日平均配速 '+fmtPace(totalMin,totalKm)+' /公里</div>';
+      avg='<div class="empty-tip" style="text-align:left;padding:10px 0 0;color:var(--blue);font-weight:600;">'+dayWord()+'平均配速 '+fmtPace(totalMin,totalKm)+' /公里</div>';
     }
     card.innerHTML = head+btn+list+avg;
     wrap.appendChild(card);
     wrap.querySelectorAll('.ex-record-btn').forEach(b=>{
-      b.onclick=()=>openRecModal(b.getAttribute('data-proj'));
+      b.onclick=()=>openRecModal(b.getAttribute('data-proj'), null);
     });
   }
 
-  function renderAll(){ renderWater(); renderTabs(); renderExercisePage(); }
+  // 日期条：显示当前查看日期与当天记录条数
+  function renderDateBar(){
+    $('datePicker').value = viewDate;
+    $('datePicker').max = todayKey();
+    const today = isViewToday();
+    const badge = $('dateBadge');
+    badge.textContent = today? '今日' : '历史记录';
+    badge.className = 'date-badge'+(today?'':' past');
+    const rs = viewRecords();
+    const w = rs.filter(r=>r.type==='water').length;
+    const e = rs.filter(r=>r.type==='exercise').length;
+    $('dateSummary').textContent = dayFull()+' · 饮水 '+w+' 条 · 运动 '+e+' 条';
+    $('exTitle').textContent = '🏃 '+dayWord()+'运动';
+    $('genCardText').textContent = today? '生成今日记录卡' : ('生成 '+dateShort()+' 记录卡');
+  }
+
+  // 过量饮水：每个日期只弹一次，避免反复打扰；常驻警示条见 renderWater
+  function checkOverdrink(){
+    const total = waterTotalNow();
+    if(total <= OVERDRINK_LIMIT) return;
+    if(warnKeys.indexOf(viewDate) >= 0) return;
+    warnKeys.push(viewDate); save(LS.warn, warnKeys);
+    $('overText').textContent = dayFull()+' 的饮水量已达 '+total+' ml，超过 10 L（10000 ml）。可能存在录入错误或过度饮水，请检查数据正确程度，并注意适量饮水。';
+    showModal('overModal');
+  }
+  function refreshWarnFlag(key){
+    if(waterTotalOn(key) > OVERDRINK_LIMIT) return;
+    const next = warnKeys.filter(k=>k!==key);
+    if(next.length!==warnKeys.length){ warnKeys=next; save(LS.warn, warnKeys); }
+  }
+
+  function renderAll(){
+    cardCache = {date:null, url:null}; // 数据变更后，记录卡按新数据重新生成
+    refreshWarnFlag(viewDate);         // 降回 10 L 以内后，下次超量可重新提示
+    renderDateBar();
+    renderWater(); renderTabs(); renderExercisePage();
+    checkOverdrink();
+  }
 
   // ---------- 操作 ----------
   // 达标祝贺：仅在饮水量从「未达标」跨到「达标」时弹出，同一天同一目标不重复
   function maybeCongrat(prev, now){
     if(prev >= goal || now < goal) return;
-    const key = todayKey()+'-'+goal;
+    const key = viewDate+'-'+goal;
     if(congratsKey === key) return;
     congratsKey = key; save(LS.congrats, congratsKey);
     showCongrats(now);
   }
   function showCongrats(total){
     const pct = goal>0 ? Math.round(total/goal*100) : 0;
-    $('congratsText').textContent = '今日已饮水 '+total+' ml，完成 '+pct+'% · 目标 '+goal+' ml';
-    $('congratsBadge').textContent = pct>=150 ? '🏆 超额完成，状态超棒！' : '💧 已达成今日饮水目标';
+    $('congratsText').textContent = dayWord()+'已饮水 '+total+' ml，完成 '+pct+'% · 目标 '+goal+' ml';
+    $('congratsBadge').textContent = pct>=150 ? '🏆 超额完成，状态超棒！' : '💧 已达成'+dayWord()+'饮水目标';
     showModal('congratsModal');
   }
 
   function addWater(){
     const prev = waterTotalNow();
-    records.push({id:genId(), type:'water', amount:WATER_STEP, ts:Date.now()});
+    const ts = isViewToday()? Date.now() : tsOf(viewDate, hhmm());
+    records.push({id:genId(), type:'water', amount:WATER_STEP, ts:ts});
     save(LS.rec, records);
-    renderWater();
-    maybeCongrat(prev, prev+WATER_STEP);
+    renderAll();
+    if(isViewToday()) maybeCongrat(prev, waterTotalNow());
   }
   function removeRecord(id){
-    records = records.filter(r=>r.id!==id);
-    save(LS.rec, records); renderAll();
+    const r = records.find(x=>x.id===id);
+    const key = r? dateKeyOf(r.ts) : viewDate;
+    records = records.filter(x=>x.id!==id);
+    save(LS.rec, records);
+    refreshWarnFlag(key);       // 降回 10 L 以内后，下次再超量可重新提示
+    renderAll();
+  }
+
+  // 饮水记录：补记新条目 或 修改已有条目
+  function openWaterModal(rec){
+    editingWaterId = rec? rec.id : null;
+    $('waterModalTitle').textContent = rec? '修改饮水记录' : '补记饮水';
+    $('waterAmount').value = rec? rec.amount : WATER_STEP;
+    $('waterTime').value = rec? fmtTime(rec.ts) : (isViewToday()? hhmm() : '12:00');
+    $('waterModalHint').textContent = rec
+      ? '可增减水量或调整时间，保存后当天合计、圆环与完成比会重新计算。'
+      : '可自定义水量与记录时间，用于补记历史数据。';
+    showModal('waterModal');
+  }
+  function saveWater(){
+    let amount = parseFloat($('waterAmount').value);
+    if(isNaN(amount)||amount<=0){ alert('请输入有效的饮水量'); return; }
+    amount = Math.min(20000, Math.max(50, Math.round(amount/50)*50));
+    const ts = tsOf(viewDate, $('waterTime').value || '12:00');
+    const prev = waterTotalNow();
+    if(editingWaterId){
+      const r = records.find(x=>x.id===editingWaterId);
+      if(r){ r.amount=amount; r.ts=ts; }
+    } else {
+      records.push({id:genId(), type:'water', amount:amount, ts:ts});
+    }
+    save(LS.rec, records);
+    hideModal('waterModal');
+    editingWaterId = null;
+    renderAll();
+    if(isViewToday()) maybeCongrat(prev, waterTotalNow());
+  }
+
+  // 列表里的 ✎：按记录类型打开对应弹窗
+  function openEditById(id){
+    const r = records.find(x=>x.id===id);
+    if(!r) return;
+    if(r.type==='water') openWaterModal(r);
+    else openRecModal(r.project, r);
+  }
+
+  // 一键至零：删除所选日期的全部饮水和运动记录
+  function openClearModal(){
+    const rs = viewRecords();
+    const w = rs.filter(r=>r.type==='water').length;
+    const e = rs.filter(r=>r.type==='exercise').length;
+    if(w+e===0){ alert(dayWord()+'没有可清空的记录'); return; }
+    $('clearWarn').textContent = '将删除 '+dayFull()+' 的全部记录：饮水 '+w+' 条、运动 '+e+' 条。清空后当天饮水量与运动量均为 0，记录卡也会变空。';
+    showModal('clearModal');
+  }
+  function confirmClear(){
+    records = records.filter(r=>dateKeyOf(r.ts)!==viewDate);
+    save(LS.rec, records);
+    const next = warnKeys.filter(k=>k!==viewDate);
+    if(next.length!==warnKeys.length){ warnKeys=next; save(LS.warn, warnKeys); }
+    if(isViewToday()){ congratsKey=''; save(LS.congrats, congratsKey); }
+    hideModal('clearModal');
+    renderAll();
   }
 
   // 修改每日饮水目标
   function openGoalModal(){
     $('goalInput').value = goal;
-    document.querySelectorAll('.quick').forEach(b=>{
+    document.querySelectorAll('#quickGoals .quick').forEach(b=>{
       b.classList.toggle('sel', Number(b.getAttribute('data-goal'))===goal);
     });
     showModal('goalModal');
@@ -740,7 +1008,7 @@
     goal = v;
     save(LS.goal, goal);
     hideModal('goalModal');
-    renderWater();
+    renderAll();
     maybeCongrat(0, waterTotalNow()); // 改目标后若已达标也祝贺
   }
 
@@ -758,19 +1026,27 @@
     el.value = String(Math.round(v*10)/10);
   }
 
-  // 记录运动弹窗：首次填默认值，之后沿用上次填写值；步长 时间5分钟 / 距离0.5公里
+  // 运动弹窗：新增（可补记历史）/ 修改；首次默认值，之后沿用上次值；步长 5分钟 / 0.5公里
   let currentProj=null;
-  function openRecModal(name){
+  function openRecModal(name, rec){
     currentProj=name;
+    editingRecId = rec? rec.id : null;
     const p=getProject(name);
+    if(!p){ alert('该运动项目已不存在，无法修改这条记录'); return; }
     const prev = lastInputs[name];
-    $('recTitle').textContent='记录 '+name;
+    $('recTitle').textContent = rec? ('修改 '+name+'记录')
+      : (isViewToday()? '记录 '+name : '补记 '+name);
     $('kmField').style.display = p.trackKm? 'block':'none';
-    $('recKm').value = (p.trackKm && prev && prev.km!=null) ? prev.km : DEF_KM;
-    $('recMin').value = (prev && prev.minutes!=null) ? prev.minutes : DEF_MIN;
-    $('recHint').textContent = prev
-      ? '已沿用上次填写数值 · 时间每步 5 分钟，距离每步 0.5 公里'
-      : '首次记录已填入默认值 · 时间每步 5 分钟，距离每步 0.5 公里';
+    $('recKm').value = rec ? (p.trackKm? (rec.km||DEF_KM) : DEF_KM)
+                           : ((p.trackKm && prev && prev.km!=null) ? prev.km : DEF_KM);
+    $('recMin').value = rec ? rec.minutes
+                            : ((prev && prev.minutes!=null) ? prev.minutes : DEF_MIN);
+    $('recTime').value = rec? fmtTime(rec.ts) : (isViewToday()? hhmm() : '12:00');
+    $('recHint').textContent = rec
+      ? '可增减距离 / 时长或修改时间，保存后当天合计与配速会重新计算。'
+      : (prev ? '已沿用上次填写数值 · 时间每步 5 分钟，距离每步 0.5 公里'
+              : '首次记录已填入默认值 · 时间每步 5 分钟，距离每步 0.5 公里');
+    $('saveRec').textContent = rec? '保存修改' : '保存';
     showModal('recModal');
     if(p.trackKm) $('recKm').focus(); else $('recMin').focus();
   }
@@ -785,12 +1061,19 @@
       if(isNaN(km)||km<=0){ alert('请输入有效的距离（公里）'); return; }
       km = Math.max(KM_STEP, Math.round(km/KM_STEP)*KM_STEP);    // 0.5 公里步长
     }
-    lastInputs[currentProj] = {km: p.trackKm? km : null, minutes: min};
-    save(LS.inputs, lastInputs);
-    records.push({id:genId(), type:'exercise', project:currentProj, km:km, minutes:min, ts:Date.now()});
+    const ts = tsOf(viewDate, $('recTime').value || '12:00');
+    if(editingRecId){
+      const r = records.find(x=>x.id===editingRecId);
+      if(r){ r.project=currentProj; r.km=km; r.minutes=min; r.ts=ts; }
+      editingRecId = null;
+    } else {
+      lastInputs[currentProj] = {km: p.trackKm? km : null, minutes: min};
+      save(LS.inputs, lastInputs);
+      records.push({id:genId(), type:'exercise', project:currentProj, km:km, minutes:min, ts:ts});
+    }
     save(LS.rec, records);
     hideModal('recModal');
-    renderExercisePage();
+    renderAll();
   }
 
   // 添加项目：弹窗支持“从常用项目选取”或“手动填写”
@@ -862,7 +1145,7 @@
   function buildCard(){
     const W=640;
     const dpr=2;
-    const recs=todayRecords();
+    const recs=viewRecords();           // 记录卡按当前所选日期生成
     const waterRecs=recs.filter(r=>r.type==='water');
     const waterTotal=waterRecs.reduce((s,r)=>s+r.amount,0);
     const pct = goal>0 ? Math.round(waterTotal/goal*100) : 0; // 不封顶
@@ -911,9 +1194,7 @@
     ctx.font='700 30px -apple-system,"PingFang SC",sans-serif';
     ctx.fillText(nickname,124,headerH/2-12);
     // 日期
-    const now=new Date();
-    const wk=['日','一','二','三','四','五','六'][now.getDay()];
-    const dateStr=now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日 周'+wk;
+    const dateStr=dayFull();
     ctx.font='20px -apple-system,"PingFang SC",sans-serif';
     ctx.fillStyle='rgba(255,255,255,.9)';
     ctx.fillText(dateStr,124,headerH/2+16);
@@ -922,7 +1203,7 @@
     let y=headerH+gap;
     ctx.fillStyle='#1f2d3d'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     ctx.font='700 26px -apple-system,"PingFang SC",sans-serif';
-    ctx.fillText('💧 今日饮水',36,y+22);
+    ctx.fillText('💧 '+dayWord()+'饮水',36,y+22);
     y+=titleH;
 
     // 饮水圆环
@@ -956,12 +1237,12 @@
     y+=exTitleGap;
     ctx.fillStyle='#1f2d3d'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     ctx.font='700 26px -apple-system,"PingFang SC",sans-serif';
-    ctx.fillText('🏃 今日运动',36,y+22);
+    ctx.fillText('🏃 '+dayWord()+'运动',36,y+22);
     y+=exTitleH;
 
     if(projNames.length===0){
       ctx.fillStyle='#8a94a6'; ctx.font='20px -apple-system,"PingFang SC",sans-serif';
-      ctx.fillText('今日暂无运动记录',36,y+28);
+      ctx.fillText(dayWord()+'暂无运动记录',36,y+28);
       y+=44;
     } else {
       projNames.forEach(pn=>{
@@ -1004,32 +1285,37 @@
     return c.toDataURL('image/png');
   }
 
+  // 记录卡按日期缓存：切换日期或数据变更后自动重新生成
+  function cardForView(){
+    if(cardCache.date!==viewDate || !cardCache.url) cardCache={date:viewDate, url:buildCard()};
+    return cardCache.url;
+  }
   function openCard(){
-    cardDataUrl = buildCard();           // 生成并缓存，供之后随时查看
-    $('cardImg').src = cardDataUrl;
+    cardCache={date:viewDate, url:buildCard()};
+    $('cardImg').src=cardCache.url;
     showModal('cardModal');
   }
-  // 查看记录卡：优先展示最近生成的卡片，未生成过则即时生成
   function viewCard(){
-    if(!cardDataUrl) cardDataUrl = buildCard();
-    $('cardImg').src = cardDataUrl;
+    $('cardImg').src=cardForView();
     showModal('cardModal');
   }
   function openLightbox(){
-    if(!cardDataUrl) cardDataUrl = buildCard();
-    $('lightboxImg').src = cardDataUrl;
+    $('lightboxImg').src=cardForView();
     showModal('lightboxModal');
   }
   function saveCard(){
-    const url = $('cardImg').src || cardDataUrl;
+    const url = $('cardImg').src || cardForView();
     if(!url) return;
     const a=document.createElement('a');
-    a.href=url; a.download='今日记录卡.png';
+    a.href=url; a.download='记录卡_'+viewDate+'.png';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
   // ---------- 事件绑定 ----------
   $('addWater').onclick=addWater;
+  $('addWaterCustom').onclick=()=>openWaterModal(null);
+  $('saveWater').onclick=saveWater;
+  $('waterAmount').addEventListener('keydown',e=>{ if(e.key==='Enter') saveWater(); });
   $('editNick').onclick=openNick;
   $('saveNick').onclick=saveNick;
   $('nickInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveNick(); });
@@ -1045,28 +1331,46 @@
     $('manageBtn').textContent = manageMode? '完成' : '管理';
     renderTabs();
   };
+
+  // 按日期查看 / 一键至零 / 当天记录卡
+  $('datePicker').onchange=()=>{
+    const v=$('datePicker').value;
+    viewDate = (v && v<=todayKey()) ? v : todayKey();
+    renderAll();
+  };
+  $('todayBtn').onclick=()=>{ viewDate=todayKey(); renderAll(); };
+  $('cardByDate').onclick=openCard;
+  $('clearDay').onclick=openClearModal;
+  $('confirmClear').onclick=confirmClear;
+  $('overGoCheck').onclick=()=>hideModal('overModal');
+
   $('genCard').onclick=openCard;
   $('viewCard').onclick=viewCard;
   $('zoomCard').onclick=openLightbox;
   $('cardImg').onclick=openLightbox;
   $('saveCard').onclick=saveCard;
 
-  // 步进按钮（目标输入 / 运动记录）与快捷目标值
+  // 步进按钮（目标 / 运动记录 / 水量）与快捷值
   document.querySelectorAll('.step-btn').forEach(b=>{
     b.onclick=()=>applyStep(b);
   });
-  document.querySelectorAll('.quick').forEach(b=>{
+  document.querySelectorAll('#quickGoals .quick').forEach(b=>{
     b.onclick=()=>{
       $('goalInput').value = b.getAttribute('data-goal');
-      document.querySelectorAll('.quick').forEach(x=>x.classList.remove('sel'));
+      document.querySelectorAll('#quickGoals .quick').forEach(x=>x.classList.remove('sel'));
       b.classList.add('sel');
     };
   });
+  document.querySelectorAll('#quickAmounts .quick').forEach(b=>{
+    b.onclick=()=>{ $('waterAmount').value = b.getAttribute('data-amount'); };
+  });
 
-  // 列表删除（事件委托）
+  // 列表修改 / 删除（事件委托）
   document.addEventListener('click',e=>{
     const del=e.target.closest('.del');
-    if(del){ removeRecord(del.getAttribute('data-id')); }
+    if(del){ removeRecord(del.getAttribute('data-id')); return; }
+    const ed=e.target.closest('.edit');
+    if(ed){ openEditById(ed.getAttribute('data-id')); }
   });
 
   // 关闭弹窗

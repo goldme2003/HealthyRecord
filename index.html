@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#2f9bff">
 <title>我的健康记录</title>
+<!-- 云服务 SDK：单文件 HTML 用 CDN 形式，@dev 通道 -->
+<script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
 <style>
   :root{
     --bg:#f2f4f7;
@@ -317,9 +319,77 @@
     font-size:13px;color:#c2410c;background:#fff4e6;border-radius:12px;
     padding:11px 12px;margin-bottom:14px;line-height:1.6;
   }
+
+  /* 云服务：登录门 */
+  .auth-gate{
+    position:fixed;inset:0;z-index:100;overflow-y:auto;
+    background:linear-gradient(160deg,#eaf4ff,#f7fbff 55%,#ffffff);
+    display:flex;align-items:flex-start;justify-content:center;padding:28px 18px 40px;
+  }
+  .auth-gate.hidden{display:none;}
+  .auth-box{width:100%;max-width:400px;background:#fff;border-radius:22px;
+    padding:28px 22px 24px;box-shadow:0 18px 50px rgba(31,45,61,.12);}
+  .auth-logo{width:64px;height:64px;border-radius:50%;background:var(--blue-soft);
+    display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 12px;}
+  .auth-box h2{text-align:center;margin:0 0 6px;font-size:22px;}
+  .auth-sub{text-align:center;color:var(--sub);font-size:13px;margin:0 0 20px;}
+  .auth-tabs{display:flex;gap:8px;background:var(--bg);padding:4px;border-radius:14px;margin-bottom:18px;}
+  .auth-tab{flex:1;border:none;background:transparent;border-radius:11px;padding:9px;
+    font-size:13px;font-weight:700;color:var(--sub);cursor:pointer;}
+  .auth-tab.sel{background:#fff;color:var(--blue);box-shadow:0 2px 8px rgba(31,45,61,.08);}
+  .auth-primary{width:100%;border:none;border-radius:13px;padding:13px;font-size:15px;
+    font-weight:700;cursor:pointer;background:var(--blue);color:#fff;}
+  .auth-primary:active{background:var(--blue-deep);}
+  .auth-primary[disabled]{opacity:.55;cursor:not-allowed;}
+  .auth-secondary{background:#fff;color:var(--blue);border:1.5px solid var(--blue);margin-top:10px;}
+  .auth-msg{font-size:13px;text-align:center;min-height:20px;margin:12px 0 0;color:#e03131;}
+  .auth-msg.ok{color:#16a34a;}
+  .auth-note{font-size:12px;color:var(--sub);line-height:1.7;text-align:center;
+    border-top:1px solid var(--line);padding-top:14px;margin:16px 0 0;}
+
+  /* 云服务：同步状态条 */
+  .sync-bar{
+    display:flex;align-items:center;gap:8px;margin-top:12px;
+    background:#fff;border-radius:12px;padding:9px 12px;
+    font-size:12px;color:var(--sub);box-shadow:var(--shadow);
+  }
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0;}
+  .sync-bar.ok .sync-dot{background:#22c55e;}
+  .sync-bar.syncing .sync-dot{background:var(--blue);animation:blink 1s infinite;}
+  .sync-bar.fail .sync-dot{background:#ef4444;}
+  .sync-bar.fail{color:#c2410c;}
+  @keyframes blink{50%{opacity:.25}}
+  .sync-text{flex:1;line-height:1.4;}
+  .logout-btn{border:none;background:var(--blue-soft);color:var(--blue-deep);
+    border-radius:10px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 </style>
 </head>
 <body>
+<!-- 云服务：验证码登录门（登录成功后隐藏） -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-box">
+    <div class="auth-logo">🌱</div>
+    <h2>我的健康记录</h2>
+    <p class="auth-sub">登录后，饮水和运动记录会保存到云端</p>
+    <div class="auth-tabs">
+      <button class="auth-tab sel" id="authTabEmail" type="button">邮箱验证码</button>
+      <button class="auth-tab" id="authTabPhone" type="button">手机验证码</button>
+    </div>
+    <div class="field">
+      <label id="authAccountLabel">邮箱地址</label>
+      <input type="email" id="authAccount" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <button class="auth-primary" id="sendCode" type="button">获取验证码</button>
+    <div class="field" style="margin-top:14px;">
+      <label>验证码</label>
+      <input type="text" id="authCode" inputmode="numeric" maxlength="6" placeholder="请输入收到的验证码">
+    </div>
+    <button class="auth-primary" id="doLogin" type="button">登录 / 注册</button>
+    <p class="auth-msg" id="authMsg"></p>
+    <p class="auth-note">首次验证通过会自动创建账号。<br>浏览器里已有的旧记录不会上传，登录后从云端记录开始。</p>
+  </div>
+</div>
+
 <div class="app">
   <!-- 顶部 -->
   <div class="topbar">
@@ -331,6 +401,13 @@
       </div>
       <div class="sub-title">我的健康记录</div>
     </div>
+  </div>
+
+  <!-- 云服务同步状态 -->
+  <div class="sync-bar" id="syncBar">
+    <span class="sync-dot"></span>
+    <span class="sync-text" id="syncText">正在连接云服务…</span>
+    <button class="logout-btn" id="logoutBtn" type="button">退出登录</button>
   </div>
 
   <!-- 按日期查看 -->
@@ -585,6 +662,23 @@
     congrats:'health_congrats', // 已祝贺标记（当天+目标值）
     warn:'health_warn'         // 已提示过量饮水的日期列表
   };
+
+  // ---------- 云服务配置 ----------
+  // publicConfig 由 workbuddy_cloud_service 激活时返回，是允许放在前端的公开值。
+  const publicConfig = {
+    endpoint:'https://my-health-tracker-09807.app.workbuddy.host',
+    oauthRelayBaseUrl:'https://www.workbuddy.cn/v2/as/genie-baas/oauth',
+    publishableKey:'wbpk_3WzIHVROncimv1v6QAV0Xm_ZtisoZ4t2xJ2pjpLpbqw6n5xCj0CIhLV'
+  };
+  const PUBLISHED_HOST = 'my-health-tracker-09807.app.workbuddy.host';
+  let cloud = null;            // 唯一的云服务客户端实例
+  let cloudReady = false;      // 已登录且云端数据已载入
+  let lastSnapshot = [];       // 云端数据快照，用于 diff 出增 / 改 / 删
+  let settingsTimer = null;
+  let syncSeq = 0;
+  let otpMethod = 'email';
+  let pendingOtp = null;
+
   const DEFAULT_NICK = '健康记录员';
   const DEFAULT_GOAL = 2000;
   const GOAL_STEP = 250;
@@ -609,6 +703,10 @@
     // 这里捕获异常，保证界面功能不受影响（仅该环境的持久化受限）。
     try{ localStorage.setItem(key, JSON.stringify(val)); }
     catch(e){ /* 存储不可用时降级为内存态 */ }
+    // 登录后：业务数据变更同步到云端（历史浏览器数据不上传）
+    if(!cloudReady) return;
+    if(key===LS.rec) syncRecordsDiff(val);
+    else if(key===LS.nick||key===LS.goal||key===LS.proj||key===LS.active||key===LS.inputs) scheduleSettingsSync();
   }
 
   // 常用运动项目（供“添加项目”时快捷选取），km 表示该运动是否记录距离
@@ -1311,6 +1409,252 @@
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
+  // ---------- 云服务：客户端 / 登录门 / 数据同步 ----------
+  let retryQueue = [];          // 同步失败的变更，下次登录后重放
+
+  function setSync(state, msg){
+    const bar=$('syncBar');
+    bar.className='sync-bar'+(state? ' '+state:'');
+    const def={ok:'已同步到云端',syncing:'正在同步到云端…',fail:'同步失败'}[state] || '未登录';
+    $('syncText').textContent = msg || def;
+  }
+  function authMsg(text, ok){
+    const el=$('authMsg');
+    el.textContent=text||'';
+    el.className='auth-msg'+(ok?' ok':'');
+  }
+  function showAuth(){ $('authGate').classList.remove('hidden'); }
+  function hideAuth(){ $('authGate').classList.add('hidden'); }
+
+  function initCloud(){
+    if(typeof WorkBuddyCloud==='undefined' || !WorkBuddyCloud.createWorkBuddyCloud){
+      authMsg('云服务组件加载失败，请检查网络后刷新页面');
+      setSync('fail','云服务组件未加载');
+      return false;
+    }
+    cloud = WorkBuddyCloud.createWorkBuddyCloud({
+      endpoint: publicConfig.endpoint,
+      oauthRelayBaseUrl: publicConfig.oauthRelayBaseUrl,
+      publishableKey: publicConfig.publishableKey
+    });
+    try{ retryQueue = JSON.parse(localStorage.getItem('health_retry')||'[]') || []; }
+    catch(e){ retryQueue = []; }
+    return true;
+  }
+
+  function rowToRecord(row){
+    return {
+      id: row.record_id,
+      type: row.kind,
+      amount: row.amount_ml==null? 0 : Number(row.amount_ml),
+      project: row.project,
+      km: row.km==null? null : Number(row.km),
+      minutes: row.minutes==null? null : Number(row.minutes),
+      ts: Number(row.ts),
+      updatedAt: row.updated_at? new Date(row.updated_at).getTime() : Date.now()
+    };
+  }
+  function cloneRec(r){ return Object.assign({}, r); }
+
+  // 登录后只以云端数据为准；浏览器里的旧 localStorage 历史保留但不上传
+  async function loadFromCloud(){
+    const res = await cloud.database.from('health_records').select('*').eq('deleted', false);
+    if(res.error) throw res.error;
+    records = (res.data||[]).map(rowToRecord);
+
+    const s = await cloud.database.from('health_settings').select('*').maybeSingle();
+    if(s.error) throw s.error;
+    if(s.data){
+      if(s.data.nickname) nickname=s.data.nickname;
+      if(s.data.water_goal) goal=Number(s.data.water_goal);
+      if(Array.isArray(s.data.projects) && s.data.projects.length) projects=s.data.projects;
+      if(Array.isArray(s.data.active_projects) && s.data.active_projects.length) active=s.data.active_projects;
+      if(s.data.last_inputs && typeof s.data.last_inputs==='object') lastInputs=s.data.last_inputs;
+    }
+    ensureSelected();
+    lastSnapshot = records.map(cloneRec);
+    try{ localStorage.setItem('health_cloud_cache', JSON.stringify(records)); }catch(e){}
+    $('nickname').textContent=nickname;
+    renderAll();
+  }
+
+  function recToParams(r, deleted){
+    return {
+      p_record_id:String(r.id),
+      p_record_date:dateKeyOf(r.ts),
+      p_kind:r.type,
+      p_amount_ml:r.type==='water'? Number(r.amount) : null,
+      p_project:r.type==='exercise'? (r.project||null) : null,
+      p_km:(r.km==null||r.km==='')? null : Number(r.km),
+      p_minutes:(r.minutes==null||r.minutes==='')? null : Number(r.minutes),
+      p_ts:Number(r.ts),
+      p_deleted:!!deleted,
+      p_updated_at:new Date(deleted? Date.now()+(++syncSeq) : (r.updatedAt||Date.now())).toISOString()
+    };
+  }
+
+  // diff：只推送发生变化的条目；删除用软删除标记，云端按 updated_at 最近者去重
+  function syncRecordsDiff(next){
+    const prevMap={}; lastSnapshot.forEach(r=>{ prevMap[r.id]=r; });
+    const nextMap={}; next.forEach(r=>{ nextMap[r.id]=r; });
+    const ops=[];
+    next.forEach(r=>{
+      const p=prevMap[r.id];
+      if(!p || JSON.stringify(p)!==JSON.stringify(r)){
+        r.updatedAt = Date.now()+(++syncSeq);
+        ops.push({rec:r, deleted:false});
+      }
+    });
+    lastSnapshot.forEach(p=>{ if(!nextMap[p.id]) ops.push({rec:p, deleted:true}); });
+    lastSnapshot = next.map(cloneRec);
+    if(ops.length) pushSync(ops);
+  }
+
+  async function pushSync(ops){
+    setSync('syncing');
+    try{
+      for(let i=0;i<ops.length;i++){
+        const res=await cloud.database.rpc('upsert_health_record', recToParams(ops[i].rec, ops[i].deleted));
+        if(res.error) throw res.error;
+      }
+      setSync('ok');
+    }catch(e){
+      retryQueue = retryQueue.concat(ops);
+      try{ localStorage.setItem('health_retry', JSON.stringify(retryQueue)); }catch(err){}
+      setSync('fail','同步失败：'+(e && e.message? e.message:'请检查网络')+'；改动已排队，下次登录自动重试');
+    }
+  }
+  async function flushRetry(){
+    if(!retryQueue.length) return;
+    const batch=retryQueue.splice(0);
+    await pushSync(batch);
+    try{ localStorage.setItem('health_retry', JSON.stringify(retryQueue)); }catch(e){}
+  }
+
+  function scheduleSettingsSync(){
+    clearTimeout(settingsTimer);
+    settingsTimer=setTimeout(pushSettings, 400);
+  }
+  async function pushSettings(){
+    if(!cloudReady) return;
+    setSync('syncing');
+    try{
+      const res=await cloud.database.rpc('save_health_settings', {
+        p_nickname:nickname,
+        p_water_goal:Number(goal),
+        p_projects:projects,
+        p_active:active,
+        p_last_inputs:lastInputs,
+        p_updated_at:new Date(Date.now()+(++syncSeq)).toISOString()
+      });
+      if(res.error) throw res.error;
+      setSync('ok');
+    }catch(e){
+      setSync('fail','设置同步失败：'+(e && e.message? e.message:'请检查网络'));
+    }
+  }
+
+  // ---------- 验证码登录 ----------
+  function setOtpMethod(m){
+    otpMethod=m; pendingOtp=null;
+    $('authTabEmail').classList.toggle('sel', m==='email');
+    $('authTabPhone').classList.toggle('sel', m==='phone');
+    $('authAccountLabel').textContent = m==='phone'? '手机号' : '邮箱地址';
+    $('authAccount').type = m==='phone'? 'tel' : 'email';
+    $('authAccount').placeholder = m==='phone'? '请输入 11 位手机号' : 'you@example.com';
+    $('authAccount').value=''; $('authCode').value='';
+    authMsg('');
+  }
+  function validAccount(v){
+    return otpMethod==='phone' ? /^1\d{10}$/.test(v) : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
+  async function sendCode(){
+    const acc=$('authAccount').value.trim();
+    if(!validAccount(acc)){
+      authMsg(otpMethod==='phone'? '请输入正确的 11 位手机号' : '请输入正确的邮箱地址');
+      return;
+    }
+    authMsg('正在发送验证码…', true);
+    $('sendCode').disabled=true;
+    try{
+      const res=await cloud.auth.sendOtp(otpMethod==='phone'? {phone:acc} : {email:acc});
+      if(res.error) throw res.error;
+      pendingOtp={account:acc, verificationId:res.data.verificationId, isExistingUser:res.data.isExistingUser};
+      authMsg('验证码已发送，请查收'+(otpMethod==='phone'? '短信':'邮件'), true);
+      let left=60;
+      $('sendCode').textContent='重新获取 ('+left+'s)';
+      const timer=setInterval(()=>{
+        left--;
+        if(left<=0){ clearInterval(timer); $('sendCode').disabled=false; $('sendCode').textContent='获取验证码'; }
+        else $('sendCode').textContent='重新获取 ('+left+'s)';
+      },1000);
+    }catch(e){
+      $('sendCode').disabled=false; $('sendCode').textContent='获取验证码';
+      authMsg('发送失败：'+(e && e.message? e.message:'请稍后重试'));
+    }
+  }
+  async function doLogin(){
+    const acc=$('authAccount').value.trim();
+    const token=$('authCode').value.trim();
+    if(!pendingOtp || pendingOtp.account!==acc){ authMsg('请先获取当前账号的验证码'); return; }
+    if(!token){ authMsg('请输入验证码'); return; }
+    authMsg('正在验证…', true);
+    $('doLogin').disabled=true;
+    try{
+      const base={verificationId:pendingOtp.verificationId, isExistingUser:pendingOtp.isExistingUser, token:token};
+      const args = otpMethod==='phone' ? Object.assign({phone:pendingOtp.account}, base)
+                                       : Object.assign({email:pendingOtp.account}, base);
+      const res=await cloud.auth.verifyOtp(args);
+      if(res.error) throw res.error;
+      const sess=await cloud.auth.getSession();
+      if(sess.error || !sess.data) throw new Error('登录态无效，请重新登录');
+      pendingOtp=null; $('authCode').value='';
+      await enterApp();
+    }catch(e){
+      authMsg('登录失败：'+(e && e.message? e.message:'验证码不正确或已过期'));
+    }finally{
+      $('doLogin').disabled=false;
+    }
+  }
+  async function enterApp(){
+    hideAuth();
+    setSync('syncing','正在读取云端记录…');
+    try{
+      await loadFromCloud();
+      cloudReady=true;
+      if(retryQueue.length) await flushRetry();
+      setSync('ok');
+    }catch(e){
+      cloudReady=false;
+      setSync('fail','云端读取失败：'+(e && e.message? e.message:'请重新登录'));
+      showAuth();
+      authMsg('云端读取失败，请重新登录或稍后重试');
+    }
+  }
+  async function logout(){
+    try{ await cloud.auth.signOut(); }catch(e){}
+    cloudReady=false; lastSnapshot=[]; pendingOtp=null;
+    showAuth(); authMsg('已退出登录'); setSync('', '未登录');
+  }
+  async function bootstrap(){
+    if(!initCloud()){ showAuth(); return; }
+    showAuth();
+    if(typeof cloud.auth.onAuthStateChange==='function'){
+      cloud.auth.onAuthStateChange(ev=>{ if(ev==='SIGNED_OUT'){ cloudReady=false; showAuth(); } });
+    }
+    try{
+      const res=await cloud.auth.getSession();
+      if(res.error) throw res.error;
+      if(res.data){ await enterApp(); return; }
+      setSync('', '未登录');
+    }catch(e){
+      setSync('', '未登录');
+      if(location.hostname!==PUBLISHED_HOST){
+        authMsg('云服务需在已发布的链接上使用，请打开分享链接登录');
+      }
+    }
+  }
+
   // ---------- 事件绑定 ----------
   $('addWater').onclick=addWater;
   $('addWaterCustom').onclick=()=>openWaterModal(null);
@@ -1373,6 +1717,14 @@
     if(ed){ openEditById(ed.getAttribute('data-id')); }
   });
 
+  // 云服务：登录门 / 退出
+  $('authTabEmail').onclick=()=>setOtpMethod('email');
+  $('authTabPhone').onclick=()=>setOtpMethod('phone');
+  $('sendCode').onclick=sendCode;
+  $('doLogin').onclick=doLogin;
+  $('logoutBtn').onclick=logout;
+  $('authCode').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
   // 关闭弹窗
   document.querySelectorAll('[data-close]').forEach(b=>{
     b.onclick=()=>hideModal(b.getAttribute('data-close'));
@@ -1385,6 +1737,7 @@
   ensureSelected();
   $('nickname').textContent=nickname;
   renderAll();
+  bootstrap();   // 先做会话检查（auth gate），登录成功后再载入云端数据
 })();
 </script>
 </body>
